@@ -1,0 +1,33 @@
+{
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "index": {
+                "type": "integer",
+                "description": "第几页幻灯片，从 1 开始"
+            },
+            "elements": {
+                "type": "string",
+                "description": "这页PPT的画面主题描述、视觉概念（用于后续生成配图）"
+            },
+            "layout": {
+                "type": "string",
+                "description": "布局类型: Full Screen Image / Split Screen Left / Split Screen Right / Top Image Bottom Text / Center Focus / Timeline / Comparison / Quote"
+            },
+            "visual_details": {
+                "type": "string",
+                "description": "需要在画面上强展示的文本标签或数据（Markdown格式），如果没有写'无'"
+            },
+            "voice_over_narrative": {
+                "type": "array",
+                "items": {
+                    "type": "integer"
+                },
+                "description": "句子索引范围 [start, end]，表示这页播报第 start 句到第 end 句"
+            }
+        },
+        "required": ["index", "elements", "layout", "visual_details", "voice_over_narrative"],
+        "additionalProperties": false
+    }
+}

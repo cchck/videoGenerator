@@ -1,0 +1,25 @@
+{
+    "type": "object",
+    "properties": {
+        "cleaned_sentences": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "index": {
+                        "type": "integer",
+                        "description": "句子索引编号"
+                    },
+                    "cleaned_text": {
+                        "type": "string",
+                        "description": "清理后适合TTS朗读的文本"
+                    }
+                },
+                "required": ["index", "cleaned_text"],
+                "additionalProperties": false
+            }
+        }
+    },
+    "required": ["cleaned_sentences"],
+    "additionalProperties": false
+}
