@@ -20,44 +20,49 @@ def get_audio_duration(audio_path: str) -> float:
     return float(result.stdout.strip())
 
 
-def _ken_burns_frame(img_array: np.ndarray, progress: float,
+def _ken_burns_frame(pil_img: Image.Image, progress: float,
                      zoom_start: float, zoom_end: float,
                      pan_x_start: float, pan_x_end: float,
                      pan_y_start: float, pan_y_end: float,
                      out_w: int, out_h: int) -> np.ndarray:
     """
-    Apply Ken Burns (zoom + pan) to a single frame.
-    progress: 0.0 → 1.0 over the image's display time.
+    Apply Ken Burns (zoom + pan) to a single frame using affine transform.
+    All coordinates stay in float — PIL handles sub-pixel interpolation,
+    eliminating the 1-pixel jitter from integer rounding.
     """
-    h, w = img_array.shape[:2]
+    w, h = pil_img.size
 
-    # Interpolate zoom and pan
+    # Interpolate zoom and pan (smooth float values)
     zoom = zoom_start + (zoom_end - zoom_start) * progress
     pan_x = pan_x_start + (pan_x_end - pan_x_start) * progress
     pan_y = pan_y_start + (pan_y_end - pan_y_start) * progress
 
-    # Crop region size
-    crop_w = int(w / zoom)
-    crop_h = int(h / zoom)
+    # Crop region size in source pixels (float)
+    crop_w = w / zoom
+    crop_h = h / zoom
 
-    # Center + pan offset
-    cx = w // 2 + int(pan_x * (w - crop_w) / 2)
-    cy = h // 2 + int(pan_y * (h - crop_h) / 2)
+    # Center + pan offset (float)
+    cx = w / 2.0 + pan_x * (w - crop_w) / 2.0
+    cy = h / 2.0 + pan_y * (h - crop_h) / 2.0
 
-    # Clamp
-    x1 = max(0, cx - crop_w // 2)
-    y1 = max(0, cy - crop_h // 2)
-    x2 = min(w, x1 + crop_w)
-    y2 = min(h, y1 + crop_h)
-    x1 = max(0, x2 - crop_w)
-    y1 = max(0, y2 - crop_h)
+    # Clamp center so crop stays within image bounds
+    cx = max(crop_w / 2.0, min(w - crop_w / 2.0, cx))
+    cy = max(crop_h / 2.0, min(h - crop_h / 2.0, cy))
 
-    # Crop and resize
-    cropped = img_array[y1:y2, x1:x2]
-    from PIL import Image as PILImage
-    pil_crop = PILImage.fromarray(cropped)
-    pil_resized = pil_crop.resize((out_w, out_h), PILImage.LANCZOS)
-    return np.array(pil_resized)
+    # Affine transform: maps output pixel (ox, oy) → source pixel (sx, sy)
+    # sx = scale_x * ox + offset_x,  sy = scale_y * oy + offset_y
+    scale_x = crop_w / out_w
+    scale_y = crop_h / out_h
+    offset_x = cx - crop_w / 2.0
+    offset_y = cy - crop_h / 2.0
+
+    result = pil_img.transform(
+        (out_w, out_h),
+        Image.AFFINE,
+        (scale_x, 0, offset_x, 0, scale_y, offset_y),
+        resample=Image.BICUBIC,
+    )
+    return np.array(result)
 
 
 def _random_ken_burns_params():
@@ -115,7 +120,7 @@ def compose_slide_video(image_paths: list, audio_path: str, output_path: str) ->
     kb_params = []
     for path in image_paths:
         img = Image.open(path).convert("RGB").resize((load_w, load_h), Image.LANCZOS)
-        images.append(np.array(img))
+        images.append(img)
         kb_params.append(_random_ken_burns_params())
 
     # Set up ffmpeg encoder

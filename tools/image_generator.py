@@ -16,7 +16,7 @@ def generate_image(prompt: str, output_path: str) -> str:
         try:
             response = client.models.generate_content(
                 model=config.IMAGE_MODEL,
-                contents=f"Generate a high-quality 16:9 landscape image: {prompt}",
+                contents=f"Generate a high-quality 16:9 landscape image. IMPORTANT: Do NOT include any real human figures, real faces, or real people anywhere in the image. Only white line-art illustrated characters are allowed. Prompt: {prompt}",
                 config=types.GenerateContentConfig(
                     response_modalities=["IMAGE", "TEXT"],
                 ),
